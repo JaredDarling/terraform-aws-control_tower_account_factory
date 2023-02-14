@@ -102,6 +102,14 @@ def list_pipelines(session: Session) -> List[Any]:
 
 
 def get_running_pipeline_count(session: Session, names: List[str]) -> int:
+    return get_pipeline_count_by_status("InProgress", session, names)
+
+
+def get_failed_pipeline_count(session: Session, names: List[str]) -> int:
+    return get_pipeline_count_by_status("Failed", session, names)
+
+
+def get_pipeline_count_by_status(status: str, session: Session, names: List[str]) -> int:
     pipeline_counter = 0
     client = session.client("codepipeline")
 
@@ -123,10 +131,10 @@ def get_running_pipeline_count(session: Session, names: List[str]) -> int:
         logger.info("Latest Execution: ")
         logger.info(latest_execution)
 
-        if latest_execution["status"] == "InProgress":
+        if latest_execution["status"] == status:
             pipeline_counter += 1
 
-    logger.info("The number of running pipelines is " + str(pipeline_counter))
+    logger.info(f"The number of pipelines with status {status} is {str(pipeline_counter)}")
 
     return pipeline_counter
 
