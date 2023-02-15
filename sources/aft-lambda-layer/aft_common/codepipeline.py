@@ -11,7 +11,6 @@ logger = utils.get_logger()
 
 AFT_CUSTOMIZATIONS_PIPELINE_NAME_PATTERN = "^\d\d\d\d\d\d\d\d\d\d\d\d-.*$"
 
-
 def get_pipeline_for_account(session: Session, account_id: str) -> str:
     current_account = session.client("sts").get_caller_identity()["Account"]
     current_region = session.region_name
@@ -43,7 +42,6 @@ def get_pipeline_for_account(session: Session, account_id: str) -> str:
                     return pipeline_name
     raise Exception("Pipelines for account id " + account_id + " was not found")
 
-
 def pipeline_is_running(session: Session, name: str) -> bool:
     client = session.client("codepipeline")
 
@@ -68,7 +66,6 @@ def pipeline_is_running(session: Session, name: str) -> bool:
     else:
         return False
 
-
 def execute_pipeline(session: Session, account_id: str) -> None:
     client = session.client("codepipeline")
     name = get_pipeline_for_account(session, account_id)
@@ -78,7 +75,6 @@ def execute_pipeline(session: Session, account_id: str) -> None:
         logger.info(response)
     else:
         logger.info("Pipeline is currently running")
-
 
 def list_pipelines(session: Session) -> List[Any]:
     pattern = re.compile(AFT_CUSTOMIZATIONS_PIPELINE_NAME_PATTERN)
@@ -99,15 +95,6 @@ def list_pipelines(session: Session) -> List[Any]:
 
     logger.info("The following pipelines were matched: " + str(matched_pipelines))
     return matched_pipelines
-
-
-def get_running_pipeline_count(session: Session, names: List[str]) -> int:
-    return get_pipeline_count_by_status("InProgress", session, names)
-
-
-def get_failed_pipeline_count(session: Session, names: List[str]) -> int:
-    return get_pipeline_count_by_status("Failed", session, names)
-
 
 def get_pipeline_count_by_status(status: str, session: Session, names: List[str]) -> int:
     pipeline_counter = 0
@@ -138,10 +125,13 @@ def get_pipeline_count_by_status(status: str, session: Session, names: List[str]
 
     return pipeline_counter
 
+def get_running_pipeline_count(session: Session, names: List[str]) -> int:
+    return get_pipeline_count_by_status("InProgress", session, names)
 
-def delete_customization_pipeline(
-    aft_management_session: Session, account_id: str
-) -> None:
+def get_failed_pipeline_count(session: Session, names: List[str]) -> int:
+    return get_pipeline_count_by_status("Failed", session, names)
+
+def delete_customization_pipeline( aft_management_session: Session, account_id: str):
     client = aft_management_session.client("codepipeline")
 
     pipeline_name = get_pipeline_for_account(
