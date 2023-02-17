@@ -14,7 +14,7 @@ resource "aws_lambda_function" "aft_customizations_identify_targets" {
   source_code_hash = var.customizations_archive_hash
   memory_size      = 1024
   runtime          = "python3.8"
-  timeout          = "300"
+  timeout          = "30"
   layers           = [var.aft_common_layer_arn]
 
   vpc_config {

@@ -26,7 +26,7 @@ def lambda_handler(event: Dict[str, Any], context: LambdaContext) -> Dict[str, A
             )
         )
 
-        running_pipelines = int(event["running_executions"]["running_pipelines"])
+        running_pipelines = int(event["executions"]["running_pipelines"])
         pipelines_to_run = maximum_concurrent_pipelines - running_pipelines
         accounts = event["targets"]["pending_accounts"]
         logger.info("Accounts submitted for execution: " + str(len(accounts)))

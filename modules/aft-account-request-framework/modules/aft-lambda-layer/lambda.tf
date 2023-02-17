@@ -12,7 +12,7 @@ resource "aws_lambda_function" "codebuild_invoker" {
   source_code_hash = var.builder_archive_hash
   memory_size      = 1024
   runtime          = "python3.8"
-  timeout          = 900
+  timeout          = 500
 
   vpc_config {
     subnet_ids         = var.aft_vpc_private_subnets
@@ -20,12 +20,21 @@ resource "aws_lambda_function" "codebuild_invoker" {
   }
 }
 
+resource "aws_cloudwatch_log_group" "aft_execute_pipeline" {
+  name              = "/aws/lambda/${aws_lambda_function.codebuild_invoker.function_name}"
+  retention_in_days = var.cloudwatch_log_group_retention
+}
+
 data "aws_lambda_invocation" "invoke_codebuild_job" {
   function_name = aws_lambda_function.codebuild_invoker.function_name
 
   input = <<JSON
 {
-  "codebuild_project_name": "${aws_codebuild_project.codebuild.name}"
+  "codebuild_project_cache": {
+    "bucket": "${var.s3_bucket_name}",
+    "artifact": "${local.lambda_layer_name_versioned}.zip"
+  },
+  "codebuild_project_name": "${aws_codebuild_project.lambda_layer_codebuild.name}"
 }
 JSON
 }

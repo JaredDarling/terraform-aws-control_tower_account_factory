@@ -4,7 +4,7 @@
 
 #tfsec:ignore:aws-s3-enable-bucket-logging
 resource "aws_s3_bucket" "aft_codepipeline_customizations_bucket" {
-  bucket = "aft-customizations-pipeline-${data.aws_caller_identity.current.account_id}"
+  bucket = "aft-customizations-pipeline-${data.aws_caller_identity.aft-management.account_id}"
 }
 
 resource "aws_s3_bucket_public_access_block" "aft-codepipeline-customizations-block-public-access" {
@@ -28,7 +28,7 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "aft-codepipeline-
 
   rule {
     apply_server_side_encryption_by_default {
-      kms_master_key_id = var.aft_kms_key_id
+      kms_master_key_id = aws_kms_key.aft.id
       sse_algorithm     = "aws:kms"
     }
   }

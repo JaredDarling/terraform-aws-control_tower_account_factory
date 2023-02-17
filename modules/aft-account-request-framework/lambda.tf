@@ -1,11 +1,30 @@
 # Copyright Amazon.com, Inc. or its affiliates. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
+
+module "aft_lambda_layer" {
+  source                                            = "./modules/aft-lambda-layer"
+  aft_version                                       = var.aft_version
+  lambda_layer_name                                 = local.lambda_layer_name
+  lambda_layer_codebuild_delay                      = local.lambda_layer_codebuild_delay
+  lambda_layer_python_version                       = local.lambda_layer_python_version
+  aft_tf_aws_customizations_module_git_ref_ssm_path = var.aft_tf_aws_customizations_module_git_ref_ssm_path
+  aft_tf_aws_customizations_module_url_ssm_path     = var.aft_tf_aws_customizations_module_url_ssm_path
+  aws_region                                        = var.ct_home_region
+  aft_kms_key_arn                                   = aws_kms_key.aft.arn
+  aft_vpc_id                                        = local.vpc_id
+  aft_vpc_private_subnets                           = local.private_subnet_ids
+  aft_vpc_default_sg                                = local.default_security_group_ids
+  s3_bucket_name                                    = aws_s3_bucket.aft_codepipeline_customizations_bucket.id
+  builder_archive_path                              = var.builder_archive_path
+  builder_archive_hash                              = var.builder_archive_hash
+  cloudwatch_log_group_retention                    = var.cloudwatch_log_group_retention
+}
+
 ######## aft_account_request_audit_trigger ########
 
 #tfsec:ignore:aws-lambda-enable-tracing
 resource "aws_lambda_function" "aft_account_request_audit_trigger" {
-
   filename      = var.request_framework_archive_path
   function_name = "aft-account-request-audit-trigger"
   description   = "Receives trigger from DynamoDB aft-request table and inserts the event into aft-request-audit table"
@@ -15,14 +34,13 @@ resource "aws_lambda_function" "aft_account_request_audit_trigger" {
   source_code_hash = var.request_framework_archive_hash
   memory_size      = 1024
   runtime          = "python3.8"
-  timeout          = "300"
-  layers           = [var.aft_common_layer_arn]
+  timeout          = local.default_lambda_timeout
+  layers           = [module.aft_lambda_layer.layer_version_arn]
 
   vpc_config {
-    subnet_ids         = tolist([aws_subnet.aft_vpc_private_subnet_01.id, aws_subnet.aft_vpc_private_subnet_02.id])
-    security_group_ids = tolist([aws_security_group.aft_vpc_default_sg.id])
+    subnet_ids         = local.private_subnet_ids
+    security_group_ids = local.default_security_group_ids
   }
-
 }
 
 resource "time_sleep" "wait_60_seconds" {
@@ -59,12 +77,12 @@ resource "aws_lambda_function" "aft_account_request_action_trigger" {
   source_code_hash = var.request_framework_archive_hash
   memory_size      = 1024
   runtime          = "python3.8"
-  timeout          = "300"
-  layers           = [var.aft_common_layer_arn]
+  timeout          = local.default_lambda_timeout
+  layers           = [module.aft_lambda_layer.layer_version_arn]
 
   vpc_config {
-    subnet_ids         = tolist([aws_subnet.aft_vpc_private_subnet_01.id, aws_subnet.aft_vpc_private_subnet_02.id])
-    security_group_ids = tolist([aws_security_group.aft_vpc_default_sg.id])
+    subnet_ids         = local.private_subnet_ids
+    security_group_ids = local.default_security_group_ids
   }
 
 }
@@ -97,12 +115,12 @@ resource "aws_lambda_function" "aft_controltower_event_logger" {
   source_code_hash = var.request_framework_archive_hash
   memory_size      = 1024
   runtime          = "python3.8"
-  timeout          = "300"
-  layers           = [var.aft_common_layer_arn]
+  timeout          = local.default_lambda_timeout
+  layers           = [module.aft_lambda_layer.layer_version_arn]
 
   vpc_config {
-    subnet_ids         = tolist([aws_subnet.aft_vpc_private_subnet_01.id, aws_subnet.aft_vpc_private_subnet_02.id])
-    security_group_ids = tolist([aws_security_group.aft_vpc_default_sg.id])
+    subnet_ids         = local.private_subnet_ids
+    security_group_ids = local.default_security_group_ids
   }
 }
 
@@ -134,22 +152,23 @@ resource "aws_lambda_function" "aft_account_request_processor" {
   source_code_hash = var.request_framework_archive_hash
   memory_size      = 1024
   runtime          = "python3.8"
-  timeout          = "300"
-  layers           = [var.aft_common_layer_arn]
+  timeout          = local.default_lambda_timeout
+  layers           = [module.aft_lambda_layer.layer_version_arn]
 
   vpc_config {
-    subnet_ids         = tolist([aws_subnet.aft_vpc_private_subnet_01.id, aws_subnet.aft_vpc_private_subnet_02.id])
-    security_group_ids = tolist([aws_security_group.aft_vpc_default_sg.id])
+    subnet_ids         = local.private_subnet_ids
+    security_group_ids = local.default_security_group_ids
   }
 
 }
 
 resource "aws_lambda_permission" "aft_account_request_processor" {
+  count         = var.enable_auto_account_request ? 1 : 0
   statement_id  = "AllowExecutionFromCloudWatch"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.aft_account_request_processor.function_name
   principal     = "events.amazonaws.com"
-  source_arn    = aws_cloudwatch_event_rule.aft_account_request_processor.arn
+  source_arn    = aws_cloudwatch_event_rule.aft_account_request_processor[0].arn
 }
 
 #tfsec:ignore:aws-cloudwatch-log-group-customer-key
@@ -172,12 +191,12 @@ resource "aws_lambda_function" "aft_invoke_aft_account_provisioning_framework" {
   source_code_hash = var.request_framework_archive_hash
   memory_size      = 1024
   runtime          = "python3.8"
-  timeout          = "300"
-  layers           = [var.aft_common_layer_arn]
+  timeout          = local.default_lambda_timeout
+  layers           = [module.aft_lambda_layer.layer_version_arn]
 
   vpc_config {
-    subnet_ids         = tolist([aws_subnet.aft_vpc_private_subnet_01.id, aws_subnet.aft_vpc_private_subnet_02.id])
-    security_group_ids = tolist([aws_security_group.aft_vpc_default_sg.id])
+    subnet_ids         = local.private_subnet_ids
+    security_group_ids = local.default_security_group_ids
   }
 
 }
@@ -210,12 +229,12 @@ resource "aws_lambda_function" "aft_cleanup_resources" {
   source_code_hash = var.request_framework_archive_hash
   memory_size      = 1024
   runtime          = "python3.8"
-  timeout          = "300"
-  layers           = [var.aft_common_layer_arn]
+  timeout          = local.default_lambda_timeout
+  layers           = [module.aft_lambda_layer.layer_version_arn]
 
   vpc_config {
-    subnet_ids         = tolist([aws_subnet.aft_vpc_private_subnet_01.id, aws_subnet.aft_vpc_private_subnet_02.id])
-    security_group_ids = tolist([aws_security_group.aft_vpc_default_sg.id])
+    subnet_ids         = local.private_subnet_ids
+    security_group_ids = local.default_security_group_ids
   }
 
 }

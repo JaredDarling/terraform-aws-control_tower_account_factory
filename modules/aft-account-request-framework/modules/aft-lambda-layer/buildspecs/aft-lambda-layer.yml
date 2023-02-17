@@ -11,8 +11,8 @@ phases:
       - DEFAULT_PATH=$(pwd)
       - AWS_MODULE_SOURCE=$(aws ssm get-parameter --name $SSM_AWS_MODULE_SOURCE --query "Parameter.Value" --output text)
       - AWS_MODULE_GIT_REF=$(aws ssm get-parameter --name $SSM_AWS_MODULE_GIT_REF --query "Parameter.Value" --output text)
-      # URL Without Access ID
-      - URL=$(echo "$AWS_MODULE_SOURCE" | awk '{split($0,a,"@"); print a[2]}')
+      # URL Without Access ID (CodeCommit only)
+#      - URL=$(echo "$AWS_MODULE_SOURCE" | awk '{split($0,a,"@"); print a[2]}')
       - |
         ssh_key_parameter=$(aws ssm get-parameter --name /aft/config/aft-ssh-key --with-decryption 2> /dev/null || echo "None")
         if [[ $ssh_key_parameter != "None" ]]; then
@@ -27,11 +27,13 @@ phases:
           eval "$(ssh-agent -s)"
           ssh-add ~/.ssh/ssh_key
         fi
-      - git config --global credential.helper '!aws codecommit credential-helper $@'
+      # - git config --global credential.helper '!aws codecommit credential-helper $@'
       - git config --global credential.UseHttpPath true
-      - echo "Building aft_common from ${URL}:${AWS_MODULE_GIT_REF}"
+      - echo "Building aft_common from ${AWS_MODULE_SOURCE}:${AWS_MODULE_GIT_REF}"
       - git clone -b $AWS_MODULE_GIT_REF $AWS_MODULE_SOURCE aws-aft-core-framework
+      - python3 -m pip install --upgrade pip
       - python3 -m pip install virtualenv
+      - python3 -m pip install wheel
       - python3 -m venv .venv
       - . .venv/bin/activate
       - python3 -m pip install ./aws-aft-core-framework/sources/aft-lambda-layer
@@ -40,5 +42,5 @@ phases:
       - mkdir -p python
       - ls
       - mv -v ./.venv/lib/ ./python/
-      - zip -r layer.zip python
-      - aws s3 cp layer.zip s3://${BUCKET_NAME}/layer.zip
+      - zip -r ${LAYER_NAME}.zip python
+      - aws s3 cp ${LAYER_NAME}.zip s3://${BUCKET_NAME}/${LAYER_NAME}.zip

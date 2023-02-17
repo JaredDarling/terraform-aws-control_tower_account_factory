@@ -6,7 +6,8 @@ from typing import TYPE_CHECKING, Any, Dict
 
 from aft_common import aft_utils as utils
 from aft_common import notifications
-from aft_common.codepipeline import get_running_pipeline_count, list_pipelines
+from aft_common.codepipeline import get_running_pipeline_count, get_failed_pipeline_count, list_pipelines
+# from aft_common.codepipeline import get_running_pipeline_count, list_pipelines
 from boto3.session import Session
 
 if TYPE_CHECKING:
@@ -22,8 +23,10 @@ def lambda_handler(event: Dict[str, Any], context: LambdaContext) -> Dict[str, i
     try:
         pipelines = list_pipelines(session)
         running_pipelines = get_running_pipeline_count(session, pipelines)
+        failed_pipelines = get_failed_pipeline_count(session, pipelines)
+#         failed_pipelines = 0 #get_failed_pipeline_count(session, pipelines)
 
-        return {"running_pipelines": running_pipelines}
+        return {"running_pipelines": running_pipelines, "failed_pipelines": failed_pipelines}
 
     except Exception as error:
         notifications.send_lambda_failure_sns_message(

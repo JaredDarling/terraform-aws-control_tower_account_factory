@@ -15,9 +15,6 @@ locals {
   log_archive_bucket_name                          = "aws-aft-logs"
   log_archive_access_logs_bucket_name              = "aws-aft-s3-access-logs"
   log_archive_bucket_object_expiration_days        = "365"
-  lambda_layer_codebuild_delay                     = "420s"
-  lambda_layer_python_version                      = "3.8"
-  lambda_layer_name                                = "aft-common"
   ssm_paths = {
     aft_tf_aws_customizations_module_url_ssm_path     = "/aft/config/aft-pipeline-code-source/repo-url"
     aft_tf_aws_customizations_module_git_ref_ssm_path = "/aft/config/aft-pipeline-code-source/repo-git-ref"

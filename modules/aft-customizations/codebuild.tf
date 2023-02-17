@@ -37,7 +37,7 @@ resource "aws_codebuild_project" "aft_global_customizations_terraform" {
 
     s3_logs {
       status   = "ENABLED"
-      location = "${aws_s3_bucket.aft_codepipeline_customizations_bucket.id}/aft-global-customizations-terraform-logs"
+      location = "${var.aft_codepipeline_customizations_bucket_name}/aft-global-customizations-terraform-logs"
     }
   }
 
@@ -106,7 +106,7 @@ resource "aws_codebuild_project" "aft_account_customizations_terraform" {
 
     s3_logs {
       status   = "ENABLED"
-      location = "${aws_s3_bucket.aft_codepipeline_customizations_bucket.id}/aft-account-customizations-terraform-logs"
+      location = "${var.aft_config_backend_bucket_id}/aft-account-customizations-terraform-logs"
     }
   }
 
@@ -224,7 +224,7 @@ resource "aws_codebuild_project" "aft_create_pipeline" {
 
     s3_logs {
       status   = "ENABLED"
-      location = "${aws_s3_bucket.aft_codepipeline_customizations_bucket.id}/aft-create-pipeline-logs"
+      location = "${var.aft_codepipeline_customizations_bucket_name}/aft-create-pipeline-logs"
     }
   }
 
@@ -242,7 +242,6 @@ resource "aws_codebuild_project" "aft_create_pipeline" {
   lifecycle {
     ignore_changes = [project_visibility]
   }
-
 }
 
 #tfsec:ignore:aws-cloudwatch-log-group-customer-key

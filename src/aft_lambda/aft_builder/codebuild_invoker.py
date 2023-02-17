@@ -5,6 +5,7 @@ import datetime
 import inspect
 import logging
 import time
+import botocore
 from typing import Any, Dict, TypedDict
 
 from boto3.session import Session
@@ -22,12 +23,21 @@ class LayerBuildStatus(TypedDict):
 def lambda_handler(event: Dict[str, Any], context: Dict[str, Any]) -> LayerBuildStatus:
     session = Session()
     try:
-        client = session.client("codebuild")
+        code_build = session.client("codebuild")
+        s3 = session.client("s3")
+
+        codebuild_project_cache_bucket = event["codebuild_project_cache"]["bucket"]
+        codebuild_project_cache_artifact = event["codebuild_project_cache"]["artifact"]
+        try:
+            s3.head_object(Bucket=codebuild_project_cache_bucket, Key=codebuild_project_cache_artifact)
+            logger.info("Cached artifact exists, returning 'SUCCEEDED' status")
+            return {"Status": 200}
+        except botocore.exceptions.ClientError as e:
+            pass # Noop - continue
 
         codebuild_project_name = event["codebuild_project_name"]
-        job_id = client.start_build(projectName=codebuild_project_name)["build"]["id"]
-
-        logger.info(f"Started build project {codebuild_project_name} job {job_id}")
+        job_id = code_build.start_build(projectName=codebuild_project_name)["build"]["id"]
+        logger.info(f"No artifact cache, starting new build project {codebuild_project_name} job {job_id}")
 
         # Wait at least 30 seconds for the build to initialize
         time.sleep(30)
@@ -36,7 +46,7 @@ def lambda_handler(event: Dict[str, Any], context: Dict[str, Any]) -> LayerBuild
         end_time = datetime.datetime.utcnow() + datetime.timedelta(minutes=14)
         while datetime.datetime.utcnow() <= end_time:
             # We pass exactly 1 job ID, so the build list should contain exactly 1 object
-            job_status = client.batch_get_builds(ids=[job_id])["builds"][0][
+            job_status = code_build.batch_get_builds(ids=[job_id])["builds"][0][
                 "buildStatus"
             ]
             if job_status == "IN_PROGRESS":
