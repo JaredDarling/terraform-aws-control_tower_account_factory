@@ -1,13 +1,11 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
+import logging
 from typing import TYPE_CHECKING
 
-from aft_common.aft_utils import (
-    SSM_PARAM_SNS_FAILURE_TOPIC_ARN,
-    get_logger,
-    get_ssm_parameter_value,
-)
+from aft_common.constants import SSM_PARAM_SNS_FAILURE_TOPIC_ARN
+from aft_common.ssm import get_ssm_parameter_value
 from boto3.session import Session
 
 if TYPE_CHECKING:
@@ -20,7 +18,7 @@ else:
     SNSClient = object
     LambdaContext = object
 
-logger = get_logger()
+logger = logging.getLogger("aft")
 
 
 def send_sns_message(

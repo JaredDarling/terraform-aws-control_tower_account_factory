@@ -2,12 +2,14 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 import inspect
+import logging
 import sys
 from typing import TYPE_CHECKING, Any, Dict
 
-from aft_common import aft_utils as utils
-from aft_common import notifications
+from aft_common import constants as utils
+from aft_common import notifications, ssm
 from aft_common.account_request_framework import put_audit_record
+from aft_common.logger import configure_aft_logger
 from boto3.session import Session
 
 if TYPE_CHECKING:
@@ -15,7 +17,8 @@ if TYPE_CHECKING:
 else:
     LambdaContext = object
 
-logger = utils.get_logger()
+configure_aft_logger()
+logger = logging.getLogger("aft")
 
 
 def lambda_handler(event: Dict[str, Any], context: LambdaContext) -> None:
@@ -28,7 +31,7 @@ def lambda_handler(event: Dict[str, Any], context: LambdaContext) -> None:
             if "eventSource" in event_record:
                 if event_record["eventSource"] == "aws:dynamodb":
                     logger.info("DynamoDB Event Record Received")
-                    table_name = utils.get_ssm_parameter_value(
+                    table_name = ssm.get_ssm_parameter_value(
                         aft_management_session, utils.SSM_PARAM_AFT_DDB_AUDIT_TABLE
                     )
                     event_name = event_record["eventName"]
@@ -51,8 +54,7 @@ def lambda_handler(event: Dict[str, Any], context: LambdaContext) -> None:
                     else:
                         logger.info(f"Event Name: {event_name} is unsupported.")
                 else:
-                    logger.info("Non DynamoDB Event Received")
-                    sys.exit(1)
+                    raise Exception("Non DynamoDB Event Received")
         else:
             logger.info("Unexpected Event Received")
 

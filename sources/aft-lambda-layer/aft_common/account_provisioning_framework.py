@@ -2,12 +2,14 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 import json
-import os
+import logging
 import time
 from datetime import datetime, timedelta
-from typing import TYPE_CHECKING, Any, Dict, List, Sequence
+from typing import TYPE_CHECKING, Any, Dict, List
 
 import aft_common.aft_utils as utils
+import aft_common.constants
+import aft_common.ssm
 from aft_common import ddb
 from aft_common.auth import AuthClient
 from aft_common.organizations import OrganizationsAgent
@@ -26,12 +28,10 @@ else:
     TagTypeDef = object
 
 
-logger = utils.get_logger()
+logger = logging.getLogger("aft")
 
 
 AFT_EXEC_ROLE = "AWSAFTExecution"
-
-SSM_PARAMETER_PATH = "/aft/account-request/custom-fields/"
 
 
 class ProvisionRoles:
@@ -174,12 +174,16 @@ class ProvisionRoles:
     def role_policy_is_attached(
         role_name: str, policy_arn: str, target_account_session: Session
     ) -> bool:
+        logger.info("Determining if {policy_arn} is attached to {role_name}")
         resource: IAMServiceResource = target_account_session.resource("iam")
         role = resource.Role(role_name)
         policy_iterator = role.attached_policies.all()
         policy_arns = [policy.arn for policy in policy_iterator]
-        logger.info(policy_arns)
-        return policy_arn in policy_arns
+        attached = policy_arn in policy_arns
+        logger.info(
+            f"{policy_arn} is {'attached' if attached else 'detached'} to {role_name}"
+        )
+        return attached
 
     def _ensure_role_can_be_assumed(
         self, role_name: str, timeout_in_mins: int = 1, delay: int = 5
@@ -199,10 +203,8 @@ class ProvisionRoles:
                 account_id=self.target_account_id, role_name=role_name
             )
             return True
-        except ClientError as error:
-            if error.response["Error"]["Code"] == "AccessDenied":
-                return False
-            raise error
+        except ClientError:
+            return False
 
     def deploy_aws_aft_roles(self) -> None:
         trust_policy = self.generate_aft_trust_policy()
@@ -212,6 +214,7 @@ class ProvisionRoles:
             ProvisionRoles.EXECUTION_ROLE_NAME,
         ]
 
+        logger.info(f"Deploying roles {', '.join(aft_role_names)}")
         for role_name in aft_role_names:
             self._deploy_role_in_target_account(
                 role_name=role_name,
@@ -224,20 +227,21 @@ class ProvisionRoles:
             self._ensure_role_can_be_assumed(role_name=role_name)
             logger.info(f"Can assume {role_name} role")
 
+        # Guard for IAM eventual consistency
+        time.sleep(65)
+
 
 # From persist-metadata Lambda
 def persist_metadata(
     payload: Dict[str, Any], account_info: Dict[str, str], session: Session
 ) -> PutItemOutputTableTypeDef:
 
-    logger.info("Function Start - persist_metadata")
-
     account_tags = payload["account_request"]["account_tags"]
     account_customizations_name = payload["account_request"][
         "account_customizations_name"
     ]
-    metadata_table_name = utils.get_ssm_parameter_value(
-        session, utils.SSM_PARAM_AFT_DDB_META_TABLE
+    metadata_table_name = aft_common.ssm.get_ssm_parameter_value(
+        session, aft_common.constants.SSM_PARAM_AFT_DDB_META_TABLE
     )
 
     item = {
@@ -262,45 +266,12 @@ def persist_metadata(
     return response
 
 
-def get_ssm_parameters_names_by_path(session: Session, path: str) -> List[str]:
-
-    client = session.client("ssm")
-    paginator = client.get_paginator("get_parameters_by_path")
-    pages = paginator.paginate(Path=path, Recursive=True)
-
-    parameter_names = []
-    for page in pages:
-        parameter_names.extend([param["Name"] for param in page["Parameters"]])
-
-    return parameter_names
-
-
-def delete_ssm_parameters(session: Session, parameters: Sequence[str]) -> None:
-    batches = utils.yield_batches_from_list(
-        parameters, batch_size=10
-    )  # Max batch size for API
-    for batched_names in batches:
-        client = session.client("ssm")
-        response = client.delete_parameters(Names=batched_names)
-
-
-def put_ssm_parameters(session: Session, parameters: Dict[str, str]) -> None:
-
-    client = session.client("ssm")
-
-    for key, value in parameters.items():
-        response = client.put_parameter(
-            Name=SSM_PARAMETER_PATH + key, Value=value, Type="String", Overwrite=True
-        )
-
-
 def tag_account(
     payload: Dict[str, Any],
     account_info: Dict[str, str],
     ct_management_session: Session,
     rollback: bool,
 ) -> None:
-    logger.info("Start Function - tag_account")
     logger.info(payload)
 
     tags = payload["account_request"]["account_tags"]

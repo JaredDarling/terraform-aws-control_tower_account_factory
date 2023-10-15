@@ -3,10 +3,13 @@
 #
 import inspect
 import json
+import logging
+import os
 import time
 from typing import TYPE_CHECKING, Any, Dict
 
-from aft_common import aft_utils as utils
+import aft_common.ssm
+from aft_common import constants as utils
 from aft_common import notifications, sqs
 from aft_common.account_provisioning_framework import ProvisionRoles
 from aft_common.account_request_framework import (
@@ -18,6 +21,7 @@ from aft_common.account_request_framework import (
 )
 from aft_common.auth import AuthClient
 from aft_common.exceptions import NoAccountFactoryPortfolioFound
+from aft_common.logger import configure_aft_logger
 from aft_common.metrics import AFTMetrics
 from boto3.session import Session
 
@@ -26,12 +30,14 @@ if TYPE_CHECKING:
 else:
     LambdaContext = object
 
-logger = utils.get_logger()
+configure_aft_logger()
+logger = logging.getLogger("aft")
 
 
 def lambda_handler(event: Dict[str, Any], context: LambdaContext) -> None:
     aft_management_session = Session()
     auth = AuthClient()
+    threshold = int(os.environ["AFT_PROVISIONING_CONCURRENCY"])
 
     try:
         account_request = AccountRequest(auth=auth)
@@ -39,20 +45,20 @@ def lambda_handler(event: Dict[str, Any], context: LambdaContext) -> None:
             account_request.associate_aft_service_role_with_account_factory()
         except NoAccountFactoryPortfolioFound:
             logger.warning(
-                message=f"Failed to automatically associate {ProvisionRoles.SERVICE_ROLE_NAME} to portfolio {AccountRequest.ACCOUNT_FACTORY_PORTFOLIO_NAME}. Manual intervention may be required"
+                f"Failed to automatically associate {ProvisionRoles.SERVICE_ROLE_NAME} to portfolio {AccountRequest.ACCOUNT_FACTORY_PORTFOLIO_NAME}. Manual intervention may be required"
             )
 
         ct_management_session = auth.get_ct_management_session(
             role_name=ProvisionRoles.SERVICE_ROLE_NAME
         )
 
-        if account_request.provisioning_in_progress():
-            logger.info("Exiting due to provisioning in progress")
+        if account_request.provisioning_threshold_reached(threshold=threshold):
+            logger.info("Concurrent account provisioning threshold reached, exiting")
             return None
         else:
             sqs_message = sqs.receive_sqs_message(
                 aft_management_session,
-                utils.get_ssm_parameter_value(
+                aft_common.ssm.get_ssm_parameter_value(
                     aft_management_session, utils.SSM_PARAM_ACCOUNT_REQUEST_QUEUE
                 ),
             )

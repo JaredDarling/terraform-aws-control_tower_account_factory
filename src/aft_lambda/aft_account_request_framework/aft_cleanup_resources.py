@@ -2,29 +2,29 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 import inspect
+import logging
 from typing import TYPE_CHECKING, Any, Dict
 
 from aft_common import codepipeline, ddb
-from aft_common.aft_utils import (
-    SSM_PARAM_AFT_DDB_META_TABLE,
-    get_logger,
-    get_ssm_parameter_value,
-)
 from aft_common.auth import AuthClient
+from aft_common.constants import SSM_PARAM_AFT_DDB_META_TABLE
+from aft_common.logger import configure_aft_logger
 from aft_common.notifications import send_lambda_failure_sns_message
 from aft_common.organizations import OrganizationsAgent
+from aft_common.ssm import get_ssm_parameter_value
 
 if TYPE_CHECKING:
     from aws_lambda_powertools.utilities.typing import LambdaContext
 else:
     LambdaContext = object
 
-logger = get_logger()
+
+configure_aft_logger()
+logger = logging.getLogger("aft")
 
 
 def lambda_handler(event: Dict[str, Any], context: LambdaContext) -> None:
     try:
-
         auth = AuthClient()
         aft_management_session = auth.get_aft_management_session()
 

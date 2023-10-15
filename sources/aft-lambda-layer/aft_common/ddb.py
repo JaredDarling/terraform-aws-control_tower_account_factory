@@ -1,9 +1,9 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
+import logging
 from typing import TYPE_CHECKING, Any, Dict, Optional
 
-from aft_common import aft_utils as utils
 from boto3.dynamodb.types import TypeDeserializer
 from boto3.session import Session
 
@@ -20,7 +20,7 @@ else:
     PutItemOutputTableTypeDef = object
     DeleteItemOutputTableTypeDef = object
 
-logger = utils.get_logger()
+logger = logging.getLogger("aft")
 
 
 def get_ddb_item(

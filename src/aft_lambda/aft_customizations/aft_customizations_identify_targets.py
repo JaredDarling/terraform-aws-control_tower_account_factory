@@ -2,10 +2,10 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 import inspect
+import logging
 import sys
 from typing import TYPE_CHECKING, Any, Dict
 
-from aft_common import aft_utils as utils
 from aft_common import notifications
 from aft_common.account_request_framework import (
     build_account_customization_payload,
@@ -18,6 +18,7 @@ from aft_common.customizations import (
     get_target_accounts,
     validate_identify_targets_request,
 )
+from aft_common.logger import configure_aft_logger
 from aft_common.organizations import OrganizationsAgent
 from botocore.exceptions import ClientError
 
@@ -26,12 +27,13 @@ if TYPE_CHECKING:
 else:
     LambdaContext = object
 
-logger = utils.get_logger()
+
+configure_aft_logger()
+logger = logging.getLogger("aft")
 
 
 def lambda_handler(event: Dict[str, Any], context: LambdaContext) -> Dict[str, Any]:
     auth = AuthClient()
-
     try:
         aft_management_session = auth.get_aft_management_session()
         ct_mgmt_session = auth.get_ct_management_session()
@@ -41,7 +43,7 @@ def lambda_handler(event: Dict[str, Any], context: LambdaContext) -> Dict[str, A
 
         payload = event
         if not validate_identify_targets_request(payload):
-            sys.exit(1)
+            raise ValueError("Invalid 'identify_targets_request' payload")
         else:
             included_accounts = get_included_accounts(
                 aft_management_session, ct_mgmt_session, orgs_agent, payload["include"]

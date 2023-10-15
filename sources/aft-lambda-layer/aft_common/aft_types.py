@@ -22,3 +22,4 @@ class AftInvokeAccountCustomizationPayload(TypedDict):
     account_request: Dict[str, Any]
     control_tower_event: Dict[str, Any]
     account_provisioning: Dict[str, Any]
+    customization_request_id: str

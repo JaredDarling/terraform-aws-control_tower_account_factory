@@ -33,7 +33,7 @@ resource "aws_lambda_function" "aft_account_request_audit_trigger" {
 
   source_code_hash = var.request_framework_archive_hash
   memory_size      = 1024
-  runtime          = "python3.8"
+  runtime          = "python3.9"
   timeout          = local.default_lambda_timeout
   layers           = [module.aft_lambda_layer.layer_version_arn]
 
@@ -76,7 +76,7 @@ resource "aws_lambda_function" "aft_account_request_action_trigger" {
 
   source_code_hash = var.request_framework_archive_hash
   memory_size      = 1024
-  runtime          = "python3.8"
+  runtime          = "python3.9"
   timeout          = local.default_lambda_timeout
   layers           = [module.aft_lambda_layer.layer_version_arn]
 
@@ -114,7 +114,7 @@ resource "aws_lambda_function" "aft_controltower_event_logger" {
 
   source_code_hash = var.request_framework_archive_hash
   memory_size      = 1024
-  runtime          = "python3.8"
+  runtime          = "python3.9"
   timeout          = local.default_lambda_timeout
   layers           = [module.aft_lambda_layer.layer_version_arn]
 
@@ -151,9 +151,15 @@ resource "aws_lambda_function" "aft_account_request_processor" {
 
   source_code_hash = var.request_framework_archive_hash
   memory_size      = 1024
-  runtime          = "python3.8"
+  runtime          = "python3.9"
   timeout          = local.default_lambda_timeout
   layers           = [module.aft_lambda_layer.layer_version_arn]
+
+  environment {
+    variables = {
+      AFT_PROVISIONING_CONCURRENCY = var.concurrent_account_factory_actions
+    }
+  }
 
   vpc_config {
     subnet_ids         = local.private_subnet_ids
@@ -190,7 +196,7 @@ resource "aws_lambda_function" "aft_invoke_aft_account_provisioning_framework" {
 
   source_code_hash = var.request_framework_archive_hash
   memory_size      = 1024
-  runtime          = "python3.8"
+  runtime          = "python3.9"
   timeout          = local.default_lambda_timeout
   layers           = [module.aft_lambda_layer.layer_version_arn]
 
@@ -228,7 +234,7 @@ resource "aws_lambda_function" "aft_cleanup_resources" {
 
   source_code_hash = var.request_framework_archive_hash
   memory_size      = 1024
-  runtime          = "python3.8"
+  runtime          = "python3.9"
   timeout          = local.default_lambda_timeout
   layers           = [module.aft_lambda_layer.layer_version_arn]
 
