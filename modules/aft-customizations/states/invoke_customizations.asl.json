@@ -42,7 +42,7 @@
       "Next": "Pending Pipeline Executions?",
       "Type": "Task",
       "Resource": "${get_pipeline_executions_function_arn}",
-      "ResultPath": "$.running_executions",
+      "ResultPath": "$.executions",
       "Catch": [
         {
           "ErrorEquals": ["States.ALL"],
@@ -56,7 +56,7 @@
         {
           "Variable": "$.targets.number_pending_accounts",
           "NumericEquals": 0,
-          "Next": "Notify Success"
+          "Next": "Pipeline Failures?"
         }
       ],
       "Default": "Below Maximum Execution Threshold?"
@@ -65,7 +65,7 @@
       "Type": "Choice",
       "Choices": [
         {
-          "Variable": "$.running_executions.running_pipelines",
+          "Variable": "$.executions.running_pipelines",
           "NumericLessThan": 5,
           "Next": "Execute Pipelines"
         }
@@ -88,6 +88,17 @@
       "Type": "Wait",
       "Seconds": 30,
       "Next": "Get Pipeline Executions"
+    },
+    "Pipeline Failures?": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.executions.failed_pipelines",
+          "NumericEquals": 0,
+          "Next": "Notify Success"
+        }
+      ],
+      "Default": "Notify Failure"
     },
     "Notify Success": {
       "Type": "Task",

@@ -2,8 +2,8 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 
-resource "aws_codebuild_project" "codebuild" {
-  name           = local.common_name
+resource "aws_codebuild_project" "lambda_layer_codebuild" {
+  name           = local.build_project_name
   description    = "Codebuild project to create lambda layer ${var.lambda_layer_name}"
   build_timeout  = "10"
   service_role   = aws_iam_role.codebuild.arn
@@ -14,6 +14,7 @@ resource "aws_codebuild_project" "codebuild" {
   }
 
   environment {
+    privileged_mode             = false
     compute_type                = "BUILD_GENERAL1_MEDIUM"
     image                       = "aws/codebuild/amazonlinux2-x86_64-standard:4.0"
     type                        = "LINUX_CONTAINER"
@@ -25,7 +26,7 @@ resource "aws_codebuild_project" "codebuild" {
     }
     environment_variable {
       name  = "LAYER_NAME"
-      value = var.lambda_layer_name
+      value = local.lambda_layer_name_versioned
     }
     environment_variable {
       name  = "BUCKET_NAME"
@@ -33,7 +34,7 @@ resource "aws_codebuild_project" "codebuild" {
     }
     environment_variable {
       name  = "EVENT_RULE_NAME"
-      value = "${local.common_name}-${replace(var.aft_version, ".", "-")}"
+      value = "${local.build_project_name}-${local.lambda_layer_version}"
     }
     environment_variable {
       name  = "EVENT_TARGET_ID"
@@ -49,24 +50,18 @@ resource "aws_codebuild_project" "codebuild" {
       value = var.aft_tf_aws_customizations_module_git_ref_ssm_path
       type  = "PLAINTEXT"
     }
-
     environment_variable {
       name  = "AWS_PARTITION"
       value = data.aws_partition.current.partition
       type  = "PLAINTEXT"
     }
-
   }
 
   logs_config {
     cloudwatch_logs {
-      group_name  = local.common_name
+      group_name  = aws_cloudwatch_log_group.lambda_layer_codebuild.name
       stream_name = "build-logs"
-    }
-
-    s3_logs {
-      status   = "ENABLED"
-      location = "${var.s3_bucket_name}/aft-lambda-layer-builder-logs"
+      status      = "ENABLED"
     }
   }
 
@@ -84,5 +79,9 @@ resource "aws_codebuild_project" "codebuild" {
   lifecycle {
     ignore_changes = [project_visibility]
   }
+}
 
+resource "aws_cloudwatch_log_group" "lambda_layer_codebuild" {
+  name              = "/aws/codebuild/${local.build_project_name}"
+  retention_in_days = var.cloudwatch_log_group_retention
 }

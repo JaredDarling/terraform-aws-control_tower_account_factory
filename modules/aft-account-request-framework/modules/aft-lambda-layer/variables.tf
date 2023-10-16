@@ -48,6 +48,7 @@ variable "aft_vpc_private_subnets" {
 variable "aft_vpc_default_sg" {
   type = list(string)
 }
+
 variable "aft_version" {
   type = string
 }
@@ -57,5 +58,9 @@ variable "builder_archive_path" {
 }
 
 variable "builder_archive_hash" {
+  type = string
+}
+
+variable "cloudwatch_log_group_retention" {
   type = string
 }

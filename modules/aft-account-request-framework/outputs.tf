@@ -21,6 +21,10 @@ output "aft_kms_key_id" {
   value       = aws_kms_key.aft.id
 }
 
+output "layer_version_arn" {
+  value = module.aft_lambda_layer.layer_version_arn
+}
+
 output "request_action_trigger_function_arn" {
   value = aws_lambda_function.aft_account_request_action_trigger.arn
 }
@@ -74,23 +78,30 @@ output "aft_sns_topic_arn" {
 output "aft_failure_sns_topic_arn" {
   value = aws_sns_topic.aft_failure_notifications.arn
 }
+output "aft_codepipeline_customizations_bucket_name" {
+  value = aws_s3_bucket.aft_codepipeline_customizations_bucket.id
+}
+
+output "aft_codepipeline_customizations_bucket_arn" {
+  value = aws_s3_bucket.aft_codepipeline_customizations_bucket.arn
+}
 
 #########################################
 # VPC Outputs
 #########################################
 
 output "aft_vpc_id" {
-  value = aws_vpc.aft_vpc.id
+  value = local.vpc_id
 }
 
 output "aft_vpc_public_subnets" {
-  value = tolist([aws_subnet.aft_vpc_public_subnet_01.id, aws_subnet.aft_vpc_public_subnet_02.id])
+  value = local.public_subnet_ids
 }
 
 output "aft_vpc_private_subnets" {
-  value = tolist([aws_subnet.aft_vpc_private_subnet_01.id, aws_subnet.aft_vpc_private_subnet_02.id])
+  value = local.private_subnet_ids
 }
 
-output "aft_vpc_default_sg" {
-  value = tolist([aws_security_group.aft_vpc_default_sg.id])
+output "aft_vpc_default_sgs" {
+  value = local.default_security_group_ids
 }

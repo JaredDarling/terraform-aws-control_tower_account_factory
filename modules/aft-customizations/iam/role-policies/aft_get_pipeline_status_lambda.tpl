@@ -8,7 +8,10 @@
         },
         {
             "Effect": "Allow",
-            "Action": "codepipeline:ListPipelines",
+            "Action": [
+                "codepipeline:ListPipelines",
+                "ssm:GetParameter"
+            ],
             "Resource": "*"
         },
       {

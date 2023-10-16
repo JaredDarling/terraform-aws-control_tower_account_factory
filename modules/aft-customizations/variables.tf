@@ -5,10 +5,6 @@ variable "aft_config_backend_kms_key_id" {
   type = string
 }
 
-variable "aft_kms_key_id" {
-  type = string
-}
-
 variable "aft_kms_key_arn" {
   type = string
 }
@@ -70,6 +66,14 @@ variable "terraform_distribution" {
 }
 
 variable "aft_config_backend_table_id" {
+  type = string
+}
+
+variable "aft_codepipeline_customizations_bucket_arn" {
+  type = string
+}
+
+variable "aft_codepipeline_customizations_bucket_name" {
   type = string
 }
 

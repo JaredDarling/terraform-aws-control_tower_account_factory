@@ -77,6 +77,12 @@ variable "cloudwatch_log_group_retention" {
   }
 }
 
+variable "enable_auto_account_request" {
+  default     = true
+  description = "Enable trigger of account request lambda every 5 min"
+  type        = bool
+}
+
 variable "maximum_concurrent_customizations" {
   description = "Maximum number of customizations/pipelines to run at once"
   type        = number
@@ -323,6 +329,23 @@ variable "terraform_api_endpoint" {
 #########################################
 # AFT VPC Variables
 #########################################
+variable "aft_create_vpc" {
+  default     = true
+  description = "Create VPC or use existing. Include aft_vpc_config for existing."
+  type        = bool
+}
+
+variable "aft_vpc_config" {
+  default = {
+    vpc_id     = ""
+    subnet_ids = []
+  }
+  description = "Used when aft_create_vpc=true"
+  type = object({
+    vpc_id     = string
+    subnet_ids = list(string)
+  })
+}
 
 variable "aft_vpc_cidr" {
   type        = string
